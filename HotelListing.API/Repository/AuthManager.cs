@@ -46,7 +46,8 @@ namespace HotelListing.API.Repository
             var authResponse = new AuthResponseDto
             {
                 UserId = _user.Id,
-                Token = token
+                Token = token,
+                RefreshToken = await CreateRefreshToken()
             };
 
             return authResponse;
@@ -90,7 +91,7 @@ namespace HotelListing.API.Repository
             var username = tokenContent.Claims.ToList()
                             .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value;
             _user = await _userManager.FindByNameAsync(username);
-            if (_user == null)
+            if (_user == null || _user.Id != request.UserId)
                 return null;
 
             var isValidRefreshToken = await _userManager.VerifyUserTokenAsync(_user, _loginProvider, _refreshToken, request.RefreshToken);
@@ -107,6 +108,7 @@ namespace HotelListing.API.Repository
             }
 
             await _userManager.UpdateSecurityStampAsync(_user);
+            return null;
         }
 
         private async Task<string> GenerateToken()
@@ -126,7 +128,7 @@ namespace HotelListing.API.Repository
                 new Claim(JwtRegisteredClaimNames.Sub, _user.Email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, _user.Email),
-                new Claim("uid", user.Id)
+                new Claim("uid", _user.Id)
             }
             .Union(userClaims).Union(roleClaims);
 

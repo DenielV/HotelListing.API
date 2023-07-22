@@ -85,9 +85,9 @@ namespace HotelListing.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<AuthResponseDto>> RefreshToken([FromBody] LoginDto loginDto)
+        public async Task<ActionResult<AuthResponseDto>> RefreshToken([FromBody] AuthResponseDto request)
         {
-            var authResponse = await _authManager.Login(loginDto);
+            var authResponse = await _authManager.VerifyRefreshToken(request);
 
             if (authResponse == null)
             {
