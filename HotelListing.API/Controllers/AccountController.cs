@@ -1,5 +1,6 @@
-﻿using HotelListing.API.Contracts;
-using HotelListing.API.Models.Users;
+﻿
+using HotelListing.API.Core.Contracts;
+using HotelListing.API.Core.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ namespace HotelListing.API.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IAuthManager _authManager;
+
         public AccountController(IAuthManager authManager)
         {
             _authManager = authManager;
