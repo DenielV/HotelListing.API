@@ -4,6 +4,7 @@ using HotelListing.API.Core.Contracts;
 using HotelListing.API.Data;
 using HotelListing.API.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using HotelListing.API.Core.Exceptions;
 
 namespace HotelListing.API.Core.Repository
 {
@@ -24,9 +25,20 @@ namespace HotelListing.API.Core.Repository
             return entity;
         }
 
+        public async Task<TResult> AddAsync<TSource, TResult>(TSource source)
+        {
+            var entity = _mapper.Map<T>(source);
+
+            await _dbContext.AddAsync(entity);
+            await _dbContext.SaveChangesAsync();
+            
+            return _mapper.Map<TResult>(entity);
+        }
+
         public async Task DeleteAsync(int id)
         {
             var entity = await GetAsync(id);
+
             _dbContext.Set<T>().Remove(entity);
             await _dbContext.SaveChangesAsync();
         }
@@ -62,14 +74,30 @@ namespace HotelListing.API.Core.Repository
 
         public async Task<T> GetAsync(int? id)
         {
-            if (id is null)
-                return null;
+            var entity = await _dbContext.Set<T>().FindAsync(id);
+            if (entity is null)
+                throw new NotFoundException(typeof(T).Name, id.HasValue ? id : "No key provided");
 
-            return await _dbContext.Set<T>().FindAsync(id);
+            return entity;
+        }
+
+        public async Task<TResult> GetAsync<TResult>(int? id)
+        {
+            var entity = await GetAsync(id);
+
+            return _mapper.Map<TResult>(entity);
         }
 
         public async Task UpdateAsync(T entity)
         {
+            _dbContext.Update(entity);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync<TSource>(int id, TSource source)
+        {
+            var entity = await GetAsync(id);
+            entity = _mapper.Map(source, entity);
             _dbContext.Update(entity);
             await _dbContext.SaveChangesAsync();
         }

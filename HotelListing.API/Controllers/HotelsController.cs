@@ -11,6 +11,7 @@ using AutoMapper;
 using HotelListing.API.Core.Models.Hotel;
 using Microsoft.AspNetCore.Authorization;
 using HotelListing.API.Core.Models;
+using HotelListing.API.Core.Exceptions;
 
 namespace HotelListing.API.Controllers
 {
@@ -20,11 +21,9 @@ namespace HotelListing.API.Controllers
     public class HotelsController : ControllerBase
     {
         private readonly IHotelsRepository _hotelsRepository;
-        private readonly IMapper _mapper;
-        public HotelsController(IHotelsRepository hotelsRepository, IMapper mapper)
+        public HotelsController(IHotelsRepository hotelsRepository)
         {
             _hotelsRepository = hotelsRepository;
-            _mapper = mapper;
         }
 
         // GET: api/Hotels
@@ -32,7 +31,6 @@ namespace HotelListing.API.Controllers
         public async Task<ActionResult<IEnumerable<GetHotelDto>>> GetHotels()
         {
             var hotels = await _hotelsRepository.GetAllAsync<GetHotelDto>();
-
             return Ok(hotels);
         }
 
@@ -40,7 +38,6 @@ namespace HotelListing.API.Controllers
         public async Task<ActionResult<PagedResult<GetHotelDto>>> GetPagedHotels(QueryParameters queryParameters)
         {
             var pagedHotelsResul = await _hotelsRepository.GetAllAsync<GetHotelDto>(queryParameters);
-
             return Ok(pagedHotelsResul);
         }
 
@@ -48,15 +45,8 @@ namespace HotelListing.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<GetHotelDetailsDto>> GetHotel(int id)
         {
-            
             var hotel = await _hotelsRepository.GetDetailsAsync(id);
-
-            if (hotel == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(_mapper.Map<GetHotelDetailsDto>(hotel));
+            return Ok(hotel);
         }
 
         // PUT: api/Hotels/5
@@ -67,32 +57,10 @@ namespace HotelListing.API.Controllers
         {
             if (id != updateHotelDto.Id)
             {
-                return BadRequest();
+                throw new BadRequestException("Invalid record ID");
             }
 
-            var hotel = await _hotelsRepository.GetAsync(id);
-
-            if(hotel == null)
-                return NotFound();
-
-            _mapper.Map(updateHotelDto, hotel);
-
-            try
-            {
-                await _hotelsRepository.UpdateAsync(hotel);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (! await _hotelsRepository.Exists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
+            await _hotelsRepository.UpdateAsync<UpdateHotelDto>(id, updateHotelDto);
             return NoContent();
         }
 
@@ -100,26 +68,18 @@ namespace HotelListing.API.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<Hotel>> PostHotel(CreateHotelDto createHotelDto)
-        {
-            var hotel = _mapper.Map<Hotel>(createHotelDto);
-            
-            await _hotelsRepository.AddAsync(hotel);
-
-            return CreatedAtAction("GetHotel", new { id = hotel.Id }, hotel);
+        public async Task<ActionResult<GetHotelDto>> PostHotel(CreateHotelDto createHotelDto)
+        {           
+            var hotelDto = await _hotelsRepository.AddAsync<CreateHotelDto, GetHotelDto>(createHotelDto);
+            return CreatedAtAction("GetHotel", new { id = hotelDto.Id }, hotelDto);
         }
 
         // DELETE: api/Hotels/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteHotel(int id)
-        {
-            if(! await _hotelsRepository.Exists(id))
-                return NotFound();
-
-            
+        {   
             await _hotelsRepository.DeleteAsync(id);
-
             return NoContent();
         }
     }

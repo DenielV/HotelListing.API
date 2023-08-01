@@ -66,10 +66,6 @@ namespace HotelListing.API.Controllers
 
             var country = await _countriesRepository.GetAsync(id);
 
-            if(country == null)
-            {
-                throw new NotFoundException(nameof(PutCountry), id);
-            }
 
             _mapper.Map(updateCountryDto, country);
 
